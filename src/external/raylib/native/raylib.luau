@@ -355,10 +355,16 @@ local export = {
         VrStereoConfig = VrStereoConfig,
         FilePathList = FilePathList,
         AutomationEvent = AutomationEvent,
-        AutomationEventList = AutomationEventList,
+        AutomationEventList = AutomationEventList
     },
+    
     ptrs = {
         Camera = ffi.types.pointer:newTag("Camera"),
+    },
+
+    LightType = {
+        LIGHT_DIRECTIONAL = 0,
+        LIGHT_POINT = 1
     },
 
     LIGHTGRAY = Color:new{ r = 200, g = 200, b = 200, a = 255 },
@@ -590,6 +596,7 @@ local export = {
         GAMEPAD_AXIS_RIGHT_TRIGGER = 5      -- Gamepad back trigger right, pressure level: [1..-1]
     },
 
+
     MaterialMapIndex = {
         MATERIAL_MAP_ALBEDO = 0,            -- Albedo material (same as: MATERIAL_MAP_DIFFUSE)
         MATERIAL_MAP_METALNESS = 1,         -- Metalness material (same as: MATERIAL_MAP_SPECULAR)
@@ -742,7 +749,6 @@ local export = {
         GESTURE_PINCH_IN    = 256,      -- Pinch in gesture
         GESTURE_PINCH_OUT   = 512       -- Pinch out gesture
     },
-
     CameraMode = {
         CAMERA_CUSTOM       = 0,          -- Camera custom, controlled by user (UpdateCamera() does nothing)
         CAMERA_FREE         = 1,          -- Camera free mode
@@ -754,12 +760,6 @@ local export = {
     CameraProjection = {
         CAMERA_PERSPECTIVE  = 0,          -- Perspective projection
         CAMERA_ORTHOGRAPHIC = 1           -- Orthographic projection
-    },
-
-    NPatchLayout = {
-        NPATCH_NINE_PATCH = 0,              -- Npatch layout: 3x3 tiles
-        NPATCH_THREE_PATCH_VERTICAL = 1,    -- Npatch layout: 1x3 tiles
-        NPATCH_THREE_PATCH_HORIZONTAL = 2   -- Npatch layout: 3x1 tiles
     },
 }
 

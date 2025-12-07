@@ -140,7 +140,7 @@ export type Fns = {
     UnloadRenderTexture: (target: RenderTexture2D) -> (),
     UpdateTexture: (texture: Texture2D, pixels: FFIPointer) -> (),
     UpdateTextureRec: (texture: Texture2D, rec: Rectangle, pixels: FFIPointer) -> (),
-    GenTextureMipmaps: (texture: FFIPointer) -> (),
+    GenTextureMipmaps: (texture: Texture2D) -> (),
     SetTextureFilter: (texture: Texture2D, filter: int) -> (),
     SetTextureWrap: (texture: Texture2D, wrap: int) -> (),
     DrawTexture: (texture: Texture2D, posX: int, posY: int, tint: Color) -> (),

@@ -5,6 +5,9 @@
 [runtime.debug]
 detailed_error = true
 
+[workspace.scripts]
+game = "src/main.lua"
+
 # Compiling settings
 #  This affects all required files and the main file.
 [runtime.luau.options]

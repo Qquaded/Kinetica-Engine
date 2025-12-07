@@ -1,4 +1,3 @@
---!strict
 --!optimize 2
 --!native
 
@@ -9,8 +8,8 @@ local signal = require("@kinetica.signal")
 local mb = require("./renderer/mesh")
 local texture = require("./renderer/texture")
 local Vector2 = require("@Vector2")
+local shader3d = require("./renderer/shader")
 local mainSignal = signal.new()
-local activeShader = "kinetica"
 
 local CFrame = require("@CFrame")
 local Instance = require("@Instance")
@@ -25,6 +24,8 @@ local loadedMaterials = {}
 local meshlib = {}
 local fontRegistry = {}
 local rendering_3d_hooks = {}
+local rendering_2d_hooks = {}
+
 local global_registry = {}
 
 local lib = raylib.lib
@@ -41,8 +42,8 @@ local Material = ffi.struct({
 	{ params = ffi.types.float:array(4) },
 })
 
-local screenWidth = lib.GetMonitorWidth(0)
-local screenHeight = lib.GetMonitorHeight(0)
+local screenWidth = 1800
+local screenHeight = 700
 
 local txtureMethods = texture(lib)
 local materialList = txtureMethods.GetMaterials()
@@ -70,6 +71,12 @@ local function vec3_ptr(x: number, y: number, z: number): FFIPointer
 	ptr:writef32(4, y)
 	ptr:writef32(8, z)
 	return ptr
+end
+
+local function loopshader(callback)
+	for shaderName, shader in pairs(activeShaders) do
+		callback(shaderName, shader)
+	end
 end
 
 local function Vector3RotateByAxisAngle(v: raylib.Vector3, axis: raylib.Vector3, angle: number): raylib.Vector3
@@ -102,11 +109,9 @@ local function loadMaterialOnModel(model, texture, const)
 	local maps = materials:readptr(structs.Material:offset("maps"))
 	maps:write(const or 0, texture, 0, structs.Texture:size())
 
-	-- Force assign the shader to the material
-	if activeShaders[activeShader] then
-		-- Write the shader struct data directly
-		materials:write(structs.Material:offset("shader"), activeShaders[activeShader], 0, structs.Shader:size())
-	end
+	loopshader(function(shaderName, shader)
+		materials:write(structs.Material:offset("shader"), shader, 0, structs.Shader:size())
+	end)
 end
 
 local function UpdateFreecam(camera: raylib.Camera3D, delta: number)
@@ -149,7 +154,7 @@ local guiRegistry = {}
 
 lib.InitWindow(screenWidth, screenHeight, "Kinetica Engine")
 lib.SetTargetFPS(0)
-lib.SetConfigFlags(const.ConfigFlags.FLAG_WINDOW_MAXIMIZED)
+lib.GuiLoadStyle("./src/themes/Kinetica2.rgs")
 
 local engineIcon = lib.LoadImage("./src/assets/icon/icon.png")
 lib.SetWindowIcon(engineIcon)
@@ -360,8 +365,31 @@ local function run()
 	local time = 0.0
 
 	while lib.WindowShouldClose() == 0 do
+		lib.SetWindowState(const.ConfigFlags.FLAG_BORDERLESS_WINDOWED_MODE)
 		local activeLights = {}
 		local delta = lib.GetFrameTime()
+		local runtimelib = {
+			lib = lib,
+			drawModel = drawModel,
+			drawPart = drawPart,
+			loadMaterialOnModel = loadMaterialOnModel,
+			LoadShader = LoadShader,
+			structs = structs,
+			const = const,
+			time = time,
+			GetFont = function(name)
+				if fontRegistry[name] then
+					return fontRegistry[name]
+				end
+			end,
+			gbSet = function(property, value)
+				global_registry[property] = value
+			end,
+
+			gbGet = function(property)
+				return global_registry[property]
+			end,
+		}
 
 		--local skybox = meshlib.GetModelRegistry().block
 		--local skybox_image = lib.LoadImage(sky_cubemap)
@@ -436,121 +464,10 @@ local function run()
 			end
 		end
 
-		if activeShaders[activeShader] then
-			lib.BeginShaderMode(activeShaders[activeShader])
-
-			if lighting then
-				if shaderUniforms[activeShader]["globalAmbient"] then
-					local ambient = lighting.Ambient
-					SetShaderUniform(
-						activeShader,
-						"globalAmbient",
-						{ ambient.R / 255, ambient.G / 255, ambient.B / 255 },
-						const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-					)
-				end
-				if shaderUniforms[activeShader]["brightness"] then
-					SetShaderUniform(
-						activeShader,
-						"brightness",
-						lighting.Brightness,
-						const.ShaderUniformDataType.SHADER_UNIFORM_INT
-					)
-				end
-				if shaderUniforms[activeShader]["dirLightDir"] then
-					local sunDir = lighting:GetSunDirection()
-					SetShaderUniform(
-						activeShader,
-						"dirLightDir",
-						{ -sunDir.X, -sunDir.Y, -sunDir.Z },
-						const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-					)
-				end
-				if shaderUniforms[activeShader]["dirLightColor"] then
-					SetShaderUniform(
-						activeShader,
-						"dirLightColor",
-						{ 1.0, 0.95, 0.8 },
-						const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-					)
-				end
-			end
-			if shaderUniforms[activeShader]["time"] then
-				SetShaderUniform(activeShader, "time", time, const.ShaderUniformDataType.SHADER_UNIFORM_INT)
-			end
-			if shaderUniforms[activeShader]["viewPos"] then
-				SetShaderUniform(
-					activeShader,
-					"viewPos",
-					{ cameraPos.x, cameraPos.y, cameraPos.z },
-					const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-				)
-			end
-			if shaderUniforms[activeShader]["lightColor"] then
-				SetShaderUniform(
-					activeShader,
-					"lightColor",
-					{ 1, 1, 1 },
-					const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-				)
-			end
-			if shaderUniforms[activeShader]["constant"] then
-				SetShaderUniform(activeShader, "constant", 1.0, const.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-			end
-			if shaderUniforms[activeShader]["linear"] then
-				SetShaderUniform(activeShader, "linear", 0.09, const.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-			end
-			if shaderUniforms[activeShader]["quadratic"] then
-				SetShaderUniform(activeShader, "quadratic", 0.032, const.ShaderUniformDataType.SHADER_UNIFORM_FLOAT)
-			end
-
-			if shaderUniforms[activeShader]["pointLightCount"] then
-				SetShaderUniform(
-					activeShader,
-					"pointLightCount",
-					#activeLights,
-					const.ShaderUniformDataType.SHADER_UNIFORM_INT
-				)
-			end
-
-			for i, light in ipairs(activeLights) do
-				SetShaderUniform(
-					activeShader,
-					("pointLights[%d].position"):format(i - 1),
-					light.pos,
-					const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-				)
-				SetShaderUniform(
-					activeShader,
-					("pointLights[%d].color"):format(i - 1),
-					light.color,
-					const.ShaderUniformDataType.SHADER_UNIFORM_VEC3
-				)
-				SetShaderUniform(
-					activeShader,
-					("pointLights[%d].intensity"):format(i - 1),
-					light.intensity,
-					const.ShaderUniformDataType.SHADER_UNIFORM_INT
-				)
-			end
-		end
+		shader3d(lib, loopshader, lighting, const, cameraPos, activeLights, SetShaderUniform, time)
 
 		for _, v in pairs(rendering_3d_hooks) do
-			v({
-				lib = lib,
-				drawModel = drawModel,
-				drawPart = drawPart,
-				loadMaterialOnModel = loadMaterialOnModel,
-				LoadShader = LoadShader,
-				structs = structs,
-				const = const,
-				time = time,
-				GetFont = function(name)
-					if fontRegistry[name] then
-						return fontRegistry[name]
-					end
-				end,
-			})
+			v(runtimelib)
 		end
 
 		for _, part in pairs(partRegistry) do
@@ -560,28 +477,17 @@ local function run()
 			end
 		end
 
-		if activeShaders[activeShader] then
-			lib.EndShaderMode()
-		end
+		lib.EndShaderMode()
+
 		lib.EndMode3D()
 
 		for _, gui in pairs(guiRegistry) do
 			-- {render = function(), object = function()}
-			gui.render(lib, gui.object(), time, structs, {
-				GetFont = function(name)
-					if fontRegistry[name] then
-						return fontRegistry[name]
-					end
-				end,
+			gui.render(lib, gui.object(), time, structs, runtimelib)
+		end
 
-				gbSet = function(property, value)
-					global_registry[property] = value
-				end,
-
-				gbGet = function(property)
-					return global_registry[property]
-				end,
-			})
+		for _, v in pairs(rendering_2d_hooks) do
+			v(runtimelib)
 		end
 
 		table.clear(activeLights)
@@ -606,7 +512,6 @@ return {
 		mainSignal:Fire("AddedPartToRenderPool", data())
 	end,
 	AddToGuiRenderingPool = function(object, renderFn)
-		print(`RENDER | Rendering gui base {object().ClassName}`)
 		table.insert(guiRegistry, {
 			render = renderFn,
 			object = object,
@@ -636,8 +541,12 @@ return {
 	mesh = meshlib,
 
 	-- 3DHook
-	Add3DHook = function(v)
+	Add3DStack = function(v)
 		table.insert(rendering_3d_hooks, v)
+	end,
+
+	Add2DStack = function(v)
+		table.insert(rendering_2d_hooks, v)
 	end,
 
 	-- Font

@@ -16,6 +16,8 @@ Players.Players = playerRegistry
 
 local function CreatePlayer(name, userId): Instance
 	local player = Instance.new("Player")
+	player.Name = name
+	player.UserId = userId
 
 	local changed = Player.callback(player)
 

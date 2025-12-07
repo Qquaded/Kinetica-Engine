@@ -22,8 +22,6 @@ local function loopRegister(v, renderer)
 
 	for _, child in pairs(children) do
 		if allowed_to_render[child.ClassName] then
-			print(`RENDERER | Rendering {child.ClassName}..`)
-
 			renderer.AddToRegistry(function()
 				return child
 			end)
@@ -31,8 +29,6 @@ local function loopRegister(v, renderer)
 
 		v.ChildAdded:Connect(function(child)
 			if allowed_to_render[child.ClassName] then
-				print(`RENDERER | Rendering {child.ClassName}..`)
-
 				renderer.AddToRegistry(function()
 					return child
 				end)
@@ -40,7 +36,6 @@ local function loopRegister(v, renderer)
 		end)
 
 		if child.BaseClass and child.BaseClass == "kinetica.light" then
-			print("Found light!!!!!!!!")
 			renderer.AddToRegistry(function()
 				return child
 			end)
@@ -48,7 +43,6 @@ local function loopRegister(v, renderer)
 	end
 
 	if allowed_to_render[v.ClassName] then
-		print(`RENDERER | Rendering {v.ClassName}..`)
 		renderer.AddToRegistry(function()
 			return v
 		end)
