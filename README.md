@@ -30,7 +30,7 @@ Here are all its services:
 Fortunately theres a tutorial:
 
 - Clone the repo:
-```git clone https://github.com/Qquaded/Kinemium-Engine.git --depth 1```
+```git clone --depth 1 https://github.com/Qquaded/Kinemium-Engine.git```
 
 - Get zune *(skip this step if you have it already installed.)*<br>
 https://zune.sh/guides/install
