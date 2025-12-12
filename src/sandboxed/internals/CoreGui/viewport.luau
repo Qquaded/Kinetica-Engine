@@ -76,9 +76,7 @@ local function Color3ToRaylib(c, transparency)
 end
 
 task.wait(2)
-print("how")
 renderer.renderSceneCallbackSet(function(texture, lib, size)
-	print("real")
 	lib.DrawTexturePro(
 		texture,
 		structs.Rectangle:new({ x = 0, y = 0, width = size.x, height = -size.y }),

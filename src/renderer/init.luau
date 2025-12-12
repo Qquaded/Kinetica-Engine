@@ -182,6 +182,7 @@ end
 local partRegistry = {}
 local guiRegistry = {}
 
+lib.SetConfigFlags(const.ConfigFlags.FLAG_WINDOW_HIGHDPI)
 lib.InitWindow(screenWidth, screenHeight, "Kinemium Engine")
 lib.SetWindowState(const.ConfigFlags.FLAG_WINDOW_RESIZABLE)
 lib.SetWindowState(const.ConfigFlags.FLAG_MSAA_4X_HINT)

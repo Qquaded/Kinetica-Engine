@@ -75,13 +75,15 @@ local function Color3ToRaylib(c, transparency)
 	})
 end
 
+-- Add this at the top, outside window.stepped
+local scrollOffset = 0
+
 window.stepped = function(windowData)
 	if windowData.title == "Output" then
 		local winX, winY = windowData.x, windowData.y + 30
-		local winWidth = windowData.width
+		local winWidth, winHeight = windowData.width, windowData.height
 		local cellHeight = 25
 		local padding = 0
-		local mousePos = rl.GetMousePosition()
 
 		if not windowData.IsDragging then
 			windowData.x = frame.AbsolutePosition.X
@@ -91,29 +93,41 @@ window.stepped = function(windowData)
 		end
 
 		local logs = LogService.GetLogHistory()
+		local totalHeight = #logs * (cellHeight + padding)
+		local targetOffset = 0
+
+		-- If total height exceeds window height, scroll to latest
+		if totalHeight > winHeight then
+			targetOffset = totalHeight - winHeight
+		end
+
+		-- Smoothly interpolate scrollOffset toward targetOffset
+		local scrollSpeed = 0.2 -- adjust speed (0-1), higher = faster
+		scrollOffset = scrollOffset + (targetOffset - scrollOffset) * scrollSpeed
+
 		for i, log in ipairs(logs) do
-			local cellY = winY + (i - 1) * (cellHeight + padding)
+			local cellY = winY + (i - 1) * (cellHeight + padding) - scrollOffset
 			local rect = { x = winX + 5, y = cellY, width = winWidth - 10, height = cellHeight }
 
-			-- alternating background color
-			local bgColor = (i % 2 == 0) and structs.Color:new({ r = 30, g = 30, b = 30, a = 255 })
-				or structs.Color:new({ r = 20, g = 20, b = 20, a = 255 })
-			rl.DrawRectangle(rect.x, rect.y, rect.width, rect.height, bgColor)
+			-- skip drawing if outside window for performance
+			if cellY + cellHeight >= winY and cellY <= winY + winHeight then
+				local bgColor = (i % 2 == 0) and structs.Color:new({ r = 30, g = 30, b = 30, a = 255 })
+					or structs.Color:new({ r = 20, g = 20, b = 20, a = 255 })
+				rl.DrawRectangle(rect.x, rect.y, rect.width, rect.height, bgColor)
 
-			-- log type color
-			local logColor = KinemiumRaylib.const.WHITE
-			if log.type == "print" then
-				logColor = structs.Color:new({ r = 200, g = 200, b = 200, a = 255 })
-			elseif log.type == "warn" then
-				logColor = structs.Color:new({ r = 255, g = 200, b = 0, a = 255 })
-			elseif log.type == "error" then
-				logColor = structs.Color:new({ r = 255, g = 50, b = 50, a = 255 })
+				local logColor = KinemiumRaylib.const.WHITE
+				if log.type == "print" then
+					logColor = structs.Color:new({ r = 200, g = 200, b = 200, a = 255 })
+				elseif log.type == "warn" then
+					logColor = structs.Color:new({ r = 255, g = 200, b = 0, a = 255 })
+				elseif log.type == "error" then
+					logColor = structs.Color:new({ r = 255, g = 50, b = 50, a = 255 })
+				end
+
+				local ts = os.date("%H:%M:%S", log.time)
+				local text = string.format("[%s] %s", ts, log.message)
+				rl.DrawTextEx(vend, text, vector.create(rect.x + 8, rect.y + 4), 22, 1, logColor)
 			end
-
-			local ts = os.date("%H:%M:%S", log.time)
-			local text = string.format("[%s] %s", ts, log.message)
-
-			rl.DrawTextEx(vend, text, vector.create(rect.x + 8, rect.y + 4), 22, 1, logColor)
 		end
 	end
 end
